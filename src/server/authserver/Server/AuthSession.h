@@ -103,6 +103,7 @@ private:
     std::string _ipCountry;
     uint16 _build;
     uint8 _expversion;
+    uint32 _challengesCount;
 
     QueryCallbackProcessor _queryProcessor;
 };

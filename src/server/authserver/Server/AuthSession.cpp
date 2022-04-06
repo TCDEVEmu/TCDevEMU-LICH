@@ -167,7 +167,7 @@ void AccountInfo::LoadResult(Field* fields)
 }
 
 AuthSession::AuthSession(tcp::socket&& socket) :
-    Socket(std::move(socket)), _status(STATUS_CHALLENGE), _build(0), _expversion(0) { }
+    Socket(std::move(socket)), _status(STATUS_CHALLENGE), _build(0), _expversion(0), _challengesCount(0) { }
 
 void AuthSession::Start()
 {
@@ -226,7 +226,6 @@ void AuthSession::ReadHandler()
     while (packet.GetActiveSize())
     {
         uint8 cmd = packet.GetReadPointer()[0];
-        uint32 ChallengesCount = 0;
         auto itr = Handlers.find(cmd);
         if (itr == Handlers.end())
         {
