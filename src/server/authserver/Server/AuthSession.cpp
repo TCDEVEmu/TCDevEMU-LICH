@@ -121,6 +121,7 @@ std::array<uint8, 16> VersionChallenge = { { 0xBA, 0xA3, 0x1E, 0x99, 0xA0, 0x0B,
 
 #define AUTH_LOGON_CHALLENGE_INITIAL_SIZE 4
 #define REALM_LIST_PACKET_SIZE 5
+#define MAX_AUTH_LOGON_CHALLENGES_IN_A_ROW 3
 
 std::unordered_map<uint8, AuthHandler> AuthSession::InitHandlers()
 {
@@ -225,6 +226,7 @@ void AuthSession::ReadHandler()
     while (packet.GetActiveSize())
     {
         uint8 cmd = packet.GetReadPointer()[0];
+        uint32 ChallengesCount = 0;
         auto itr = Handlers.find(cmd);
         if (itr == Handlers.end())
         {
@@ -251,6 +253,16 @@ void AuthSession::ReadHandler()
             {
                 CloseSocket();
                 return;
+            }
+            else
+            {
+                ++ChallengesCount;
+                if (challengesCount == MAX_AUTH_LOGON_CHALLENGES_IN_A_ROW)
+                {
+                    LOG_ERROR("server.authserver", "[AuthChallenge] Got '{}' AUTH_LOGON_CHALLENGE in a row from '{}', possible ongoing DoS", ChallengesCount, GetRemoteIpAddress().to_string());
+                    CloseSocket();
+                    return;
+                }
             }
         }
 
