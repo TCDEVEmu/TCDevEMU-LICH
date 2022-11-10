@@ -103,6 +103,8 @@ namespace ObjectAccessor
 
     template<>
     void RemoveObject(Player* player);
+
+    void UpdatePlayerNameMapReference(std::string const& oldname, Player* player);
 }
 
 #endif
