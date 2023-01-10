@@ -23,6 +23,7 @@
 #include "DatabaseEnv.h"
 #include "GameConfig.h"
 #include "Log.h"
+#include "StopWatch.h"
 #include "Util.h"
 #include "Warden.h"
 
@@ -42,6 +43,8 @@ WardenCheckMgr* WardenCheckMgr::instance()
 
 void WardenCheckMgr::LoadWardenChecks()
 {
+    StopWatch sw;
+
     // Check if Warden is enabled by config before loading anything
     if (!CONF_GET_BOOL("Warden.Enabled"))
     {
@@ -161,8 +164,8 @@ void WardenCheckMgr::LoadWardenChecks()
         ++count;
     } while (result->NextRow());
 
-    LOG_INFO("server.loading", ">> Loaded {} warden checks.", count);
-    LOG_INFO("server.loading", " ");
+    LOG_INFO("server.loading", ">> Loaded {} warden checks in {}", count, sw);
+    LOG_INFO("server.loading", "");
 }
 
 void WardenCheckMgr::LoadWardenOverrides()

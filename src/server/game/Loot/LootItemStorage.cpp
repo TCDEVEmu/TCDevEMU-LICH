@@ -20,7 +20,9 @@
 
 #include "LootItemStorage.h"
 #include "DatabaseEnv.h"
+#include "Log.h"
 #include "ObjectMgr.h"
+#include "StopWatch.h"
 
 LootItemStorage::LootItemStorage()
 {
@@ -38,19 +40,21 @@ LootItemStorage* LootItemStorage::instance()
 
 void LootItemStorage::LoadStorageFromDB()
 {
-    uint32 oldMSTime = getMSTime();
+    StopWatch sw;
     lootItemStore.clear();
 
     CharacterDatabasePreparedStatement stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_ITEMCONTAINER_ITEMS);
     PreparedQueryResult result = CharacterDatabase.Query(stmt);
+
     if (!result)
     {
-        LOG_WARN("server.loading", ">> Loaded 0 stored items!");
+        LOG_INFO("server.loading", ">> Loaded 0 stored items!");
         LOG_INFO("server.loading", " ");
         return;
     }
 
     uint32 count = 0;
+
     do
     {
         auto fields = result->Fetch();
@@ -62,7 +66,7 @@ void LootItemStorage::LoadStorageFromDB()
         ++count;
     } while (result->NextRow());
 
-    LOG_INFO("server.loading", ">> Loaded {} stored items in {} ms", count, GetMSTimeDiffToNow(oldMSTime));
+    LOG_INFO("server.loading", ">> Loaded {} stored items in {}", count, sw);
     LOG_INFO("server.loading", " ");
 }
 
@@ -199,6 +203,7 @@ bool LootItemStorage::LoadStoredLoot(Item* item, Player* player)
             li.randomPropertyId = it2->randomPropertyId;
             li.randomSuffix = it2->randomSuffix;
             li.rollWinnerGUID = ObjectGuid::Empty;
+            li.groupid = 0;
 
             // Copy the extra loot conditions from the item in the loot template
             lt->CopyConditions(&li, it2->conditionLootId);

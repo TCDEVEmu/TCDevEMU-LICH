@@ -27,6 +27,7 @@
 #include "Log.h"
 #include "Player.h"
 #include "ScriptMgr.h"
+#include "StopWatch.h"
 #include "Tokenize.h"
 #include "WorldSession.h"
 
@@ -81,6 +82,8 @@ void Warhead::Impl::ChatCommands::ChatCommandNode::LoadFromBuilder(ChatCommandBu
 
 /*static*/ void Warhead::Impl::ChatCommands::ChatCommandNode::LoadCommandMap()
 {
+    StopWatch sw;
+
     InvalidateCommandMap();
     LoadCommandsIntoMap(nullptr, COMMAND_MAP, sScriptMgr->GetChatCommands());
 
@@ -136,6 +139,9 @@ void Warhead::Impl::ChatCommands::ChatCommandNode::LoadFromBuilder(ChatCommandBu
 
     for (auto& [name, cmd] : COMMAND_MAP)
         cmd.ResolveNames(std::string(name));
+
+    LOG_INFO("server.loading", ">> Commands initialized in {}", sw);
+    LOG_INFO("server.loading", "");
 }
 
 void Warhead::Impl::ChatCommands::ChatCommandNode::ResolveNames(std::string name)

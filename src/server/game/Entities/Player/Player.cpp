@@ -79,6 +79,7 @@
 #include "SpellAuraEffects.h"
 #include "SpellAuras.h"
 #include "SpellMgr.h"
+#include "StopWatch.h"
 #include "StringConvert.h"
 #include "TicketMgr.h"
 #include "Tokenize.h"
@@ -1851,7 +1852,7 @@ void Player::Regenerate(Powers power)
                 bool recentCast = IsUnderLastManaUseEffect();
                 float ManaIncreaseRate = CONF_GET_FLOAT("Rate.Mana");
 
-                if (getLevel() < 15)
+                if (CONF_GET_BOOL("EnableLowLevelRegenBoost") && getLevel() < 15)
                     ManaIncreaseRate = CONF_GET_FLOAT("Rate.Mana") * (2.066f - (getLevel() * 0.066f));
 
                 if (recentCast) // Trinity Updates Mana in intervals of 2s, which is correct
@@ -1961,8 +1962,8 @@ void Player::RegenerateHealth()
 
     float HealthIncreaseRate = CONF_GET_FLOAT("Rate.Health");
 
-    if (getLevel() < 15)
-        HealthIncreaseRate = CONF_GET_FLOAT("Rate.Health") * (2.066f - (getLevel() * 0.066f));
+    if (CONF_GET_BOOL("EnableLowLevelRegenBoost") && getLevel() < 15)
+        HealthIncreaseRate *= 2.066f - (getLevel() * 0.066f);
 
     float addvalue = 0.0f;
 
@@ -2543,14 +2544,9 @@ void Player::InitStatsForLevel(bool reapplyMods)
     PlayerLevelInfo info;
     sObjectMgr->GetPlayerLevelInfo(getRace(true), getClass(), getLevel(), &info);
 
-    uint32 exp_max_lvl = GetMaxLevelForExpansion(GetSession()->Expansion());
-    uint32 conf_max_lvl = CONF_GET_UINT("MaxPlayerLevel");
-
-    if (exp_max_lvl == DEFAULT_MAX_LEVEL || exp_max_lvl >= conf_max_lvl)
-        SetUInt32Value(PLAYER_FIELD_MAX_LEVEL, conf_max_lvl);
-    else
-        SetUInt32Value(PLAYER_FIELD_MAX_LEVEL, exp_max_lvl);
-
+    uint32 maxPlayerLevel = CONF_GET_UINT("MaxPlayerLevel");
+    sScriptMgr->OnSetMaxLevel(this, maxPlayerLevel);
+    SetUInt32Value(PLAYER_FIELD_MAX_LEVEL, maxPlayerLevel);
     SetUInt32Value(PLAYER_NEXT_LEVEL_XP, sObjectMgr->GetXPForLevel(getLevel()));
 
     // reset before any aura state sources (health set/aura apply)
@@ -4268,22 +4264,28 @@ void Player::DeleteOldCharacters()
  */
 void Player::DeleteOldCharacters(uint32 keepDays)
 {
-    LOG_INFO("server.loading", "Player::DeleteOldChars: Deleting all characters which have been deleted {} days before...", keepDays);
+    StopWatch sw;
+
+    LOG_INFO("server.loading", ">> Deleting all characters which have been deleted {} days before...", keepDays);
     LOG_INFO("server.loading", " ");
 
     CharacterDatabasePreparedStatement stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHAR_OLD_CHARS);
     stmt->SetData(0, uint32(GameTime::GetGameTime().count() - time_t(keepDays * DAY)));
-    PreparedQueryResult result = CharacterDatabase.Query(stmt);
 
+    PreparedQueryResult result = CharacterDatabase.Query(stmt);
     if (result)
     {
-        LOG_INFO("server.loading", "Player::DeleteOldChars: Found {} character(s) to delete", result->GetRowCount());
+        LOG_INFO("server.loading", ">> Found {} character(s) to delete", result->GetRowCount());
+
         do
         {
             auto fields = result->Fetch();
             Player::DeleteFromDB(fields[0].Get<uint32>(), fields[1].Get<uint32>(), true, true);
         } while (result->NextRow());
     }
+
+    LOG_INFO("server.loading", ">> Deleting all characters done. Elapsed: {}", sw);
+    LOG_INFO("server.loading", "");
 }
 
 void Player::SetMovement(PlayerMovementType pType)
@@ -10248,6 +10250,8 @@ void Player::ContinueTaxiFlight()
         RemoveAurasByType(SPELL_AURA_MOUNTED);
     }
 
+    SetCanTeleport(true);
+
     GetSession()->SendDoFlight(mountDisplayId, path, startNode);
 }
 
@@ -13393,7 +13397,7 @@ void Player::learnSpellHighRank(uint32 spellid)
 void Player::_LoadSkills(PreparedQueryResult result)
 {
     //                                                           0      1      2
-    // SetQuery(PLAYER_LOGIN_QUERY_LOADSKILLS,          "SELECT skill, value, max FROM character_skills WHERE guid = '{}'", m_guid.GetCounter());
+    // AddQuery(PLAYER_LOGIN_QUERY_LOADSKILLS,          "SELECT skill, value, max FROM character_skills WHERE guid = '{}'", m_guid.GetCounter());
 
     uint32 count = 0;
     std::unordered_map<uint32, uint32> loadedSkillValues;
@@ -14725,7 +14729,7 @@ void Player::_SaveGlyphs(CharacterDatabaseTransaction trans)
 
 void Player::_LoadTalents(PreparedQueryResult result)
 {
-    // SetQuery(PLAYER_LOGIN_QUERY_LOADTALENTS, "SELECT spell, specMask FROM character_talent WHERE guid = '{}'", m_guid.GetCounter());
+    // AddQuery(PLAYER_LOGIN_QUERY_LOADTALENTS, "SELECT spell, specMask FROM character_talent WHERE guid = '{}'", m_guid.GetCounter());
     if (result)
     {
         do

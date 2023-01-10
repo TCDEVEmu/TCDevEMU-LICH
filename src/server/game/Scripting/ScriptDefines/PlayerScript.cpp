@@ -617,6 +617,14 @@ void ScriptMgr::OnFirstLogin(Player* player)
     });
 }
 
+void ScriptMgr::OnSetMaxLevel(Player* player, uint32& maxPlayerLevel)
+{
+    ExecuteScript<PlayerScript>([&](PlayerScript* script)
+    {
+        script->OnSetMaxLevel(player, maxPlayerLevel);
+    });
+}
+
 bool ScriptMgr::CanJoinInBattlegroundQueue(Player* player, ObjectGuid BattlemasterGuid, BattlegroundTypeId BGTypeID, uint8 joinAsGroup, GroupJoinBattlegroundResult& err)
 {
     auto ret = IsValidBoolScript<PlayerScript>([&](PlayerScript* script)
@@ -1463,5 +1471,13 @@ void ScriptMgr::OnAddQuest(Player* player, Quest const* quest, Object* questGive
     ExecuteScript<PlayerScript>([player, quest, questGiver](PlayerScript* script)
     {
         script->OnAddQuest(player, quest, questGiver);
+    });
+}
+
+void ScriptMgr::OnUpdateProfessionSkill(Player* player, uint16 skillId, int32 chance, uint32& step)
+{
+    ExecuteScript<PlayerScript>([player, skillId, chance, &step](PlayerScript* script)
+    {
+        script->OnUpdateProfessionSkill(player, skillId, chance, step);
     });
 }

@@ -166,7 +166,7 @@ union keyData
 uint32 Warden::BuildChecksum(const uint8* data, uint32 length)
 {
     keyData hash{};
-    hash.bytes = Warhead::Crypto::SHA1::GetDigestOf(data, size_t(length));
+    hash.bytes = Warhead::Crypto::SHA1::GetDigestOf(data, std::size_t(length));
     uint32 checkSum = 0;
 
     for (uint8 i = 0; i < 5; ++i)
@@ -229,11 +229,10 @@ void Warden::ApplyPenalty(uint16 checkId, std::string const& reason)
         }
         case WARDEN_ACTION_BAN:
         {
-            std::stringstream duration;
-            duration << CONF_GET_INT("Warden.BanDuration") << "s";
+            auto duration{ Warhead::StringFormat("{}s", CONF_GET_INT("Warden.BanDuration")) };
             std::string accountName;
             AccountMgr::GetName(_session->GetAccountId(), accountName);
-            sBan->BanAccount(accountName, duration.str(), causeMsg, "Server");
+            sBan->BanAccount(accountName, duration, causeMsg, "Server");
             break;
         }
     }

@@ -438,6 +438,7 @@ public: /* PlayerScript */
     void OnAfterUpdateAttackPowerAndDamage(Player* player, float& level, float& base_attPower, float& attPowerMod, float& attPowerMultiplier, bool ranged);
     void OnBeforeInitTalentForLevel(Player* player, uint8& level, uint32& talentPointsForLevel);
     void OnFirstLogin(Player* player);
+    void OnSetMaxLevel(Player* player, uint32& maxPlayerLevel);
     void OnPlayerCompleteQuest(Player* player, Quest const* quest);
     void OnBattlegroundDesertion(Player* player, BattlegroundDesertionType const desertionType);
     bool CanJoinInBattlegroundQueue(Player* player, ObjectGuid BattlemasterGuid, BattlegroundTypeId BGTypeID, uint8 joinAsGroup, GroupJoinBattlegroundResult& err);
@@ -518,6 +519,7 @@ public: /* PlayerScript */
     void OnCalculateMinMaxDamage(Player* player, float& damageFromAP);
     bool CanCompleteQuest(Player* player, Quest const* questInfo, QuestStatusData const* questStatusData);
     void OnAddQuest(Player* player, Quest const* quest, Object* questGiver);
+    void OnUpdateProfessionSkill(Player* player, uint16 skillId, int32 chance, uint32& step);
 
     // Anti cheat
     void AnticheatSetSkipOnePacketForASH(Player* player, bool apply);

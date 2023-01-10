@@ -21,7 +21,6 @@
 #include "MapBuilder.h"
 #include "PathCommon.h"
 #include "StopWatch.h"
-#include "Timer.h"
 #include <boost/filesystem.hpp>
 
 using namespace MMAP;
@@ -285,6 +284,7 @@ int main(int argc, char** argv)
                        skipBattlegrounds, debugOutput, bigBaseUnit, mapnum, offMeshInputPath, threads);
 
     StopWatch sw;
+
     if (file)
         builder.buildMeshFromFile(file);
     else if (tileX > -1 && tileY > -1 && mapnum >= 0)

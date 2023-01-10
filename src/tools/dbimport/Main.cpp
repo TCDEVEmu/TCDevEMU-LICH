@@ -80,13 +80,14 @@ int main(int argc, char** argv)
         }
     );
 
+    OpenSSLCrypto::threadsSetup();
+
+    std::shared_ptr<void> opensslHandle(nullptr, [](void*) { OpenSSLCrypto::threadsCleanup(); });
+
     // Initialize the database connection
     if (!StartDB())
         return 1;
 
-    OpenSSLCrypto::threadsSetup();
-
-    std::shared_ptr<void> opensslHandle(nullptr, [](void*) { OpenSSLCrypto::threadsCleanup(); });
     std::shared_ptr<void> dbHandle(nullptr, [](void*) { StopDB(); });
 
     LOG_INFO("dbimport", "Halting process...");

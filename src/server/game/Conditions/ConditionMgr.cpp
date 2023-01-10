@@ -20,6 +20,7 @@
 
 #include "ConditionMgr.h"
 #include "AchievementMgr.h"
+#include "DBCacheMgr.h"
 #include "DatabaseEnv.h"
 #include "Errors.h"
 #include "GameEventMgr.h"
@@ -33,6 +34,7 @@
 #include "Spell.h"
 #include "SpellAuras.h"
 #include "SpellMgr.h"
+#include "StopWatch.h"
 
 // Checks if object meets the condition
 // Can have CONDITION_SOURCE_TYPE_NONE && !mReferenceId if called from a special event (ie: eventAI)
@@ -773,21 +775,24 @@ uint32 Condition::GetMaxAvailableConditionTargets()
     // returns number of targets which are available for given source type
     switch (SourceType)
     {
-    case CONDITION_SOURCE_TYPE_SMART_EVENT:
-        return 3;
-    case CONDITION_SOURCE_TYPE_SPELL:
-    case CONDITION_SOURCE_TYPE_SPELL_IMPLICIT_TARGET:
-    case CONDITION_SOURCE_TYPE_CREATURE_TEMPLATE_VEHICLE:
-    case CONDITION_SOURCE_TYPE_VEHICLE_SPELL:
-    case CONDITION_SOURCE_TYPE_SPELL_CLICK_EVENT:
-    case CONDITION_SOURCE_TYPE_GOSSIP_MENU:
-    case CONDITION_SOURCE_TYPE_GOSSIP_MENU_OPTION:
-    case CONDITION_SOURCE_TYPE_NPC_VENDOR:
-    case CONDITION_SOURCE_TYPE_SPELL_PROC:
-        return 2;
-    default:
-        return 1;
+        case CONDITION_SOURCE_TYPE_SMART_EVENT:
+            return 3;
+        case CONDITION_SOURCE_TYPE_SPELL:
+        case CONDITION_SOURCE_TYPE_SPELL_IMPLICIT_TARGET:
+        case CONDITION_SOURCE_TYPE_CREATURE_TEMPLATE_VEHICLE:
+        case CONDITION_SOURCE_TYPE_VEHICLE_SPELL:
+        case CONDITION_SOURCE_TYPE_SPELL_CLICK_EVENT:
+        case CONDITION_SOURCE_TYPE_GOSSIP_MENU:
+        case CONDITION_SOURCE_TYPE_GOSSIP_MENU_OPTION:
+        case CONDITION_SOURCE_TYPE_NPC_VENDOR:
+        case CONDITION_SOURCE_TYPE_SPELL_PROC:
+        case CONDITION_SOURCE_TYPE_CREATURE_VISIBILITY:
+            return 2;
+        default:
+            break;
     }
+
+    return 1;
 }
 
 ConditionMgr::ConditionMgr() {}
@@ -1020,7 +1025,7 @@ ConditionList ConditionMgr::GetConditionsForNpcVendorEvent(uint32 creatureId, ui
 
 void ConditionMgr::LoadConditions(bool isReload)
 {
-    uint32 oldMSTime = getMSTime();
+    StopWatch sw;
 
     Clean();
 
@@ -1050,9 +1055,7 @@ void ConditionMgr::LoadConditions(bool isReload)
         sSpellMgr->UnloadSpellInfoImplicitTargetConditionLists();
     }
 
-    QueryResult result = WorldDatabase.Query("SELECT SourceTypeOrReferenceId, SourceGroup, SourceEntry, SourceId, ElseGroup, ConditionTypeOrReference, ConditionTarget, "
-                                             " ConditionValue1, ConditionValue2, ConditionValue3, NegativeCondition, ErrorType, ErrorTextId, ScriptName FROM conditions");
-
+    auto result{ sDBCacheMgr->GetResult(DBCacheTable::Conditions) };
     if (!result)
     {
         LOG_WARN("server.loading", ">> Loaded 0 conditions. DB table `conditions` is empty!");
@@ -1297,8 +1300,8 @@ void ConditionMgr::LoadConditions(bool isReload)
         ++count;
     }
 
-    LOG_INFO("server.loading", ">> Loaded {} conditions in {} ms", count, GetMSTimeDiffToNow(oldMSTime));
-    LOG_INFO("server.loading", " ");
+    LOG_INFO("server.loading", ">> Loaded {} conditions in {}", count, sw);
+    LOG_INFO("server.loading", "");
 }
 
 bool ConditionMgr::addToLootTemplate(Condition* cond, LootTemplate* loot)

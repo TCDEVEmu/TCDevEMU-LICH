@@ -20,6 +20,7 @@
 
 #include "GameTime.h"
 #include "InstanceScript.h"
+#include "Log.h"
 #include "ObjectAccessor.h"
 #include "ScriptObject.h"
 #include "the_botanica.h"

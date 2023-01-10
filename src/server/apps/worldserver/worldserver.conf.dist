@@ -2532,6 +2532,15 @@ Rate.Pet.LevelXP = 0.05
 WaterBreath.Timer = 180000
 
 #
+#    EnableLowLevelRegenBoost
+#        Description: Greatly increase Health and Mana regen rates for players under level 15 (Added in patch 3.3)
+#        Default:     1 - Enabled
+#                     0 - Disabled
+#
+
+EnableLowLevelRegenBoost = 1
+
+#
 #    SkillGain.Crafting
 #    SkillGain.Defense
 #    SkillGain.Gathering
@@ -3846,6 +3855,20 @@ LeaveGroupOnLogout.Enabled = 1
 ChangeFaction.MaxMoney = 0
 
 #
+#     DBCache.WaitAtAdd.Enable
+#        Description: Enable async load database cache
+#        Default:     1 - Enabled
+#
+
+DBCache.AsyncLoad.Enable = 1
+
+#
+#     DBCache.WaitAtAdd.Enable
+#        Description: Enable wait query at add in store
+#        Default:     0 - Disabled
+#
+
+DBCache.WaitAtAdd.Enable = 0
 ###################################################################################################
 
 ###################################################################################################
@@ -4249,29 +4272,8 @@ VIP.Enable = 0
 VIP.Update.Delay = 10
 
 #
-#   VIP.Mount.MinLevel
-#       Description: Min level for learning mount at login
-#       Default: 3
-#
-#   VIP.Mount.SpellID
-#       Description: Spell id for mount
-#       Default: 3
-#
-
-VIP.Mount.MinLevel = 3
-VIP.Mount.SpellID = 72286
-
-#
-#   VIP.Spells.List
-#        Description: Spell list for learn at login
-#        Default:
-#
-
-VIP.Spells.List = "26662,62555"
-
-#
 #   VIP.Unbind.Duration
-#       Description: Delay needed to use the .vip unbind command in seconds
+#       Description: Delay needed to use the `.vip unbind` command in seconds
 #       Default: 86400 (1 day)
 #
 

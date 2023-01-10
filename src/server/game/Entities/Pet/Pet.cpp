@@ -30,6 +30,7 @@
 #include "InstanceScript.h"
 #include "Log.h"
 #include "ObjectMgr.h"
+#include "PetLoadQueryHolder.h"
 #include "PetPackets.h"
 #include "Player.h"
 #include "QueryHolder.h"
@@ -126,44 +127,6 @@ void Pet::RemoveFromWorld()
         GetMap()->GetObjectsStore().Remove<Pet>(GetGUID());
     }
 }
-
-class PetLoadQueryHolder : public CharacterDatabaseQueryHolder
-{
-public:
-    enum
-    {
-        DECLINED_NAMES,
-        AURAS,
-        SPELLS,
-        COOLDOWNS,
-
-        MAX
-    };
-
-    PetLoadQueryHolder(ObjectGuid::LowType ownerGuid, uint32 petNumber)
-    {
-        SetSize(MAX);
-
-        CharacterDatabasePreparedStatement stmt = nullptr;
-
-        stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_PET_DECLINED_NAME);
-        stmt->SetData(0, ownerGuid);
-        stmt->SetData(1, petNumber);
-        SetPreparedQuery(DECLINED_NAMES, stmt);
-
-        stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_PET_AURA);
-        stmt->SetData(0, petNumber);
-        SetPreparedQuery(AURAS, stmt);
-
-        stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_PET_SPELL);
-        stmt->SetData(0, petNumber);
-        SetPreparedQuery(SPELLS, stmt);
-
-        stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_PET_SPELL_COOLDOWN);
-        stmt->SetData(0, petNumber);
-        SetPreparedQuery(COOLDOWNS, stmt);
-    }
-};
 
 std::pair<PetStable::PetInfo const*, PetSaveMode> Pet::GetLoadPetInfo(PetStable const& stable, uint32 petEntry, uint32 petnumber, bool current)
 {
@@ -1505,7 +1468,7 @@ void Pet::_SaveSpellCooldowns(CharacterDatabaseTransaction trans)
         {
             m_CreatureSpellCooldowns.erase(itr2);
         }
-        else if (itr2->second.end <= infTime && (itr2->second.end > (curMSTime + 30 * IN_MILLISECONDS)))
+        else if (itr2->second.end <= infTime)
         {
             uint32 cooldown = ((itr2->second.end - curMSTime) / IN_MILLISECONDS) + curTime;
             stmt = CharacterDatabase.GetPreparedStatement(CHAR_INS_PET_SPELL_COOLDOWN);
