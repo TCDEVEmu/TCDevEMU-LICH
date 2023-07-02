@@ -32,6 +32,7 @@ class ObjectGuid;
 class Creature;
 class WorldSession;
 class VipQueryHolder;
+class TempSummon;
 
 using VipSpelLList = std::vector<uint32>;
 
@@ -94,7 +95,7 @@ public:
     bool Add(uint32 accountID, Seconds endTime, uint32 level, bool force = false);
     bool Delete(uint32 accountID);
 
-    // For player targer
+    // For player target
     void OnLoginPlayer(Player* player);
     void OnLogoutPlayer(Player* player);
     void UnSet(uint32 accountID);
@@ -102,7 +103,7 @@ public:
     bool IsVip(uint32 accountID);
     uint32 GetLevel(Player* player);
     std::string GetDuration(Player* player);
-    std::string GetDuration(uint32 accountID);
+    std::string GetDuration(uint32 accountID, int8 locale = 0);
     void RemoveCooldown(Player* player, uint32 spellID);
     void UnBindInstances(Player* player);
     void SendVipInfo(ChatHandler* handler, ObjectGuid targetGuid);
@@ -128,6 +129,10 @@ public:
     // Async load
     void LoadInfoForSession(VipQueryHolder const& holder);
 
+    // Vip menu
+    void SendVipMenu(Player* player);
+    void VipMenuHandle(Player* player, uint32 menuID, uint32 action);
+
 private:
     void LoadUnbinds();
 
@@ -139,18 +144,30 @@ private:
     VipRates* GetVipRates(uint32 vipLevel);
     Seconds* GetUnbindTime(uint64 guid);
     static Player* GetPlayerFromAccount(uint32 accountID);
-    static std::string GetDuration(VipInfo* vipInfo);
+    static std::string GetDuration(VipInfo* vipInfo, int8 locale = 0);
+
+    TempSummon* GetTempSummon(Player* player);
+    void AddTempSummon(Player* player, TempSummon* summon);
+    void DeleteTempSummon(Player* player);
 
     bool _isEnable{};
     Seconds _updateDelay{};
     Seconds _unbindDuration{ 1_days };
     uint32 _maxLevel{};
+    bool _isMenuEnable{};
+    bool _isMenuAuctioneerEnable{};
+    bool _isMenuBankEnable{};
+    bool _isMenuMailEnable{};
+    bool _isMenuBuffEnable{};
 
     std::unordered_map<uint32/*acc id*/, VipInfo> _store;
     std::unordered_map<uint32/*level*/, VipRates> _storeRates;
     std::unordered_map<uint64/*guid*/, Seconds/*unbindtime*/> _storeUnbind;
     std::unordered_map<uint32/*creature entry*/, uint32/*vip level*/> _storeVendors;
     std::unordered_map<uint32/*vip level*/, VipLevelInfo> _vipLevelsInfo;
+    std::vector<uint32> _spellBuffs;
+
+    std::unordered_map<Player*, TempSummon*> _tempSummons;
 
     TaskScheduler scheduler;
     std::mutex _mutex;

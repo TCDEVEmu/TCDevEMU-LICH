@@ -20,7 +20,6 @@
 
 #include "ACSoap.h"
 #include "AsyncAcceptor.h"
-#include "AsyncAuctionListing.h"
 #include "BattlegroundMgr.h"
 #include "BigNumber.h"
 #include "CliRunnable.h"
@@ -114,7 +113,6 @@ void StopDB();
 bool LoadRealmInfo();
 AsyncAcceptor* StartRaSocketAcceptor();
 void ShutdownCLIThread(std::thread* cliThread);
-void AuctionListingRunnable();
 void WorldUpdateLoop();
 variables_map GetConsoleArguments(int argc, char** argv, fs::path& configFile, [[maybe_unused]] std::string& cfg_service);
 
@@ -128,6 +126,8 @@ int main(int argc, char** argv)
     {
         World::StopNow(SHUTDOWN_EXIT_CODE);
     });
+
+    std::shared_ptr<void> signalMgrHandle(nullptr, [](void*) { sSignalMgr->Stop(); });
 
     // Command line parsing
     auto configFile = fs::path(sConfigMgr->GetConfigPath() + std::string(_WARHEAD_CORE_CONFIG));
@@ -387,15 +387,6 @@ int main(int argc, char** argv)
         cliThread.reset(new std::thread(CliThread), &ShutdownCLIThread);
     }
 
-    // Launch CliRunnable thread
-    std::shared_ptr<std::thread> auctionLisingThread;
-    auctionLisingThread.reset(new std::thread(AuctionListingRunnable),
-        [](std::thread* thr)
-    {
-        thr->join();
-        delete thr;
-    });
-
     if (sConfigMgr->isDryRun())
     {
         LOG_INFO("server.loading", "Dry run completed, terminating.");
@@ -434,13 +425,6 @@ bool StartDB()
 
     if (!sDatabaseMgr->Load())
         return false;
-
-    // Enable dynamic connections
-    if (!sConfigMgr->isDryRun())
-    {
-        CharacterDatabase.InitDynamicConnections();
-        WorldDatabase.InitDynamicConnections();
-    }
 
     ///- Get the realm Id from the configuration file
     realm.Id.Realm = sConfigMgr->GetOption<uint32>("RealmID", 0);
@@ -686,56 +670,6 @@ bool LoadRealmInfo()
     realm.PopulationLevel = fields[10].Get<float>();
     realm.Build = fields[11].Get<uint32>();
     return true;
-}
-
-void AuctionListingRunnable()
-{
-    LOG_INFO("server", "Starting up Auction House Listing thread...");
-
-    while (!World::IsStopped())
-    {
-        if (AsyncAuctionListingMgr::IsAuctionListingAllowed())
-        {
-            uint32 diff = AsyncAuctionListingMgr::GetDiff();
-            AsyncAuctionListingMgr::ResetDiff();
-
-            if (AsyncAuctionListingMgr::GetTempList().size() || AsyncAuctionListingMgr::GetList().size())
-            {
-                std::lock_guard<std::mutex> guard(AsyncAuctionListingMgr::GetLock());
-
-                {
-                    std::lock_guard<std::mutex> guard(AsyncAuctionListingMgr::GetTempLock());
-
-                    for (auto const& delayEvent : AsyncAuctionListingMgr::GetTempList())
-                        AsyncAuctionListingMgr::GetList().emplace_back(delayEvent);
-
-                    AsyncAuctionListingMgr::GetTempList().clear();
-                }
-
-                for (auto& itr : AsyncAuctionListingMgr::GetList())
-                {
-                    if (itr._msTimer <= diff)
-                        itr._msTimer = 0;
-                    else
-                        itr._msTimer -= diff;
-                }
-
-                for (std::list<AuctionListItemsDelayEvent>::iterator itr = AsyncAuctionListingMgr::GetList().begin(); itr != AsyncAuctionListingMgr::GetList().end(); ++itr)
-                {
-                    if ((*itr)._msTimer != 0)
-                        continue;
-
-                    if ((*itr).Execute())
-                        AsyncAuctionListingMgr::GetList().erase(itr);
-
-                    break;
-                }
-            }
-        }
-        std::this_thread::sleep_for(1ms);
-    }
-
-    LOG_INFO("server", "Auction House Listing thread exiting without problems.");
 }
 
 variables_map GetConsoleArguments(int argc, char** argv, fs::path& configFile, [[maybe_unused]] std::string& configService)

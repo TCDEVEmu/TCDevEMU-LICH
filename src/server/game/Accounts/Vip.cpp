@@ -21,17 +21,24 @@
 #include "Vip.h"
 #include "Chat.h"
 #include "DatabaseEnv.h"
+#include "GameLocale.h"
 #include "GameTime.h"
 #include "Log.h"
 #include "ModulesConfig.h"
-#include "ObjectGuid.h"
-#include "Optional.h"
 #include "Player.h"
+#include "ScriptedGossip.h"
 #include "SpellMgr.h"
 #include "StopWatch.h"
+#include "StringConvert.h"
 #include "TaskScheduler.h"
 #include "Tokenize.h"
 #include "VipQueryHolder.h"
+
+namespace
+{
+    constexpr uint32 VIP_MENU_ID = 1;
+    constexpr uint32 NPC_AUCTIONEER = 15677;
+}
 
 float VipRates::GetVipRate(VipRateType type) const
 {
@@ -61,6 +68,26 @@ void Vip::LoadConfig()
     }
 
     _unbindDuration = Seconds(MOD_CONF_GET_UINT("VIP.Unbind.Duration"));
+    _isMenuEnable = MOD_CONF_GET_BOOL("VIP.Menu.Enable");
+    _isMenuAuctioneerEnable = MOD_CONF_GET_BOOL("VIP.Menu.Auctioneer.Enable");
+    _isMenuBankEnable = MOD_CONF_GET_BOOL("VIP.Menu.Bank.Enable");
+    _isMenuMailEnable = MOD_CONF_GET_BOOL("VIP.Menu.Mail.Enable");
+    _isMenuBuffEnable = MOD_CONF_GET_BOOL("VIP.Menu.Buff.Enable");
+
+    _spellBuffs.clear();
+
+    auto spellList = MOD_CONF_GET_STR("VIP.Command.Buff.List");
+    for (auto spellString : Warhead::Tokenize(spellList, ',', false))
+    {
+        auto spellID = Warhead::StringTo<uint32>(spellString);
+        if (!spellID)
+        {
+            LOG_ERROR("module", "Vip: Incorrect spell id '{}' in config option 'VIP.Command.Buff.List'. Skip", spellString);
+            continue;
+        }
+
+        _spellBuffs.emplace_back(*spellID);
+    }
 }
 
 void Vip::InitSystem()
@@ -128,7 +155,8 @@ bool Vip::Add(uint32 accountID, Seconds endTime, uint32 level, bool force /*= fa
 
     if (auto player = GetPlayerFromAccount(accountID))
     {
-        ChatHandler(player->GetSession()).PSendSysMessage("> У вас обновление премиум статуса. Уровень {}. Окончание через {}", level, Warhead::Time::ToTimeString(endTime - GameTime::GetGameTime(), 4, TimeFormat::FullText));
+        ChatHandler(player->GetSession()).PSendSysMessage("> У вас обновление премиум статуса. Уровень {}. Окончание через {}",
+            level, GameLocale::ToTimeString(endTime - GameTime::GetGameTime(), player->GetSession()->GetSessionDbLocaleIndex(), false));
         LearnSpells(player, level);
     }
 
@@ -257,12 +285,12 @@ std::string Vip::GetDuration(Player* player)
     if (!player)
         return "<неизвестно>";
 
-    return GetDuration(player->GetSession()->GetAccountId());
+    return GetDuration(player->GetSession()->GetAccountId(), player->GetSession()->GetSessionDbLocaleIndex());
 }
 
-std::string Vip::GetDuration(uint32 accountID)
+std::string Vip::GetDuration(uint32 accountID, int8 locale /*= 0*/)
 {
-    return GetDuration(GetVipInfo(accountID));
+    return GetDuration(GetVipInfo(accountID), locale);
 }
 
 void Vip::RemoveCooldown(Player* player, uint32 spellID)
@@ -736,12 +764,12 @@ Player* Vip::GetPlayerFromAccount(uint32 accountID)
     return session->GetPlayer();
 }
 
-std::string Vip::GetDuration(VipInfo* vipInfo)
+std::string Vip::GetDuration(VipInfo* vipInfo, int8 locale /*= 0*/)
 {
-    if (!vipInfo)
+    if (!vipInfo || vipInfo->EndTime < GameTime::GetGameTime())
         return "<неизвестно>";
 
-    return Warhead::Time::ToTimeString(vipInfo->EndTime - GameTime::GetGameTime(), 3, TimeFormat::FullText);
+    return GameLocale::ToTimeString(vipInfo->EndTime - GameTime::GetGameTime(), locale, false);
 }
 
 VipLevelInfo* Vip::GetVipLevelInfo(uint32 level)
@@ -804,4 +832,121 @@ void Vip::LoadInfoForSession(VipQueryHolder const& holder)
     }
 
     _store.emplace(holder.GetAccountId(), VipInfo{ holder.GetAccountId(), level, startTime, endTime });
+}
+
+void Vip::SendVipMenu(Player* player)
+{
+    if (!player)
+        return;
+
+    ChatHandler handler{ player->GetSession() };
+
+    if (!IsVip(player))
+    {
+        handler.PSendSysMessage("У вас нет вип аккаунта");
+        return;
+    }
+
+    if (!_isMenuEnable)
+    {
+        handler.PSendSysMessage("Вип меню отключено");
+        return;
+    }
+
+    if (player->duel ||
+        player->GetMap()->IsBattleArena() ||
+        player->InBattleground() ||
+        player->HasFlag(UNIT_FIELD_FLAGS_2, UNIT_FLAG2_FEIGN_DEATH) ||
+        player->isDead() ||
+        player->IsInCombat() ||
+        player->IsInFlight() ||
+        player->HasStealthAura() ||
+        player->HasInvisibilityAura())
+    {
+        handler.PSendSysMessage("Сейчас вы не можете этого сделать");
+        return;
+    }
+
+    // Clears old options
+    ClearGossipMenuFor(player);
+
+    AddGossipItemFor(player, GOSSIP_ICON_CHAT, Warhead::StringFormat("Уровень: {}", GetLevel(player)), GOSSIP_SENDER_MAIN, 100);
+    AddGossipItemFor(player, GOSSIP_ICON_CHAT, Warhead::StringFormat("Осталось: {}", GetDuration(player)), GOSSIP_SENDER_MAIN, 100);
+    AddGossipItemFor(player, GOSSIP_ICON_CHAT, "---", GOSSIP_SENDER_MAIN, 100);
+
+    if (_isMenuAuctioneerEnable)
+        AddGossipItemFor(player, GOSSIP_ICON_CHAT, "Аукцион", GOSSIP_SENDER_MAIN, 1);
+
+    if (_isMenuBankEnable)
+        AddGossipItemFor(player, GOSSIP_ICON_CHAT, "Банк", GOSSIP_SENDER_MAIN, 2);
+
+    if (_isMenuMailEnable)
+        AddGossipItemFor(player, GOSSIP_ICON_CHAT, "Почта", GOSSIP_SENDER_MAIN, 3);
+
+    if (_isMenuBuffEnable)
+        AddGossipItemFor(player, GOSSIP_ICON_CHAT, "Получить вип баффы", GOSSIP_SENDER_MAIN, 4);
+
+    // SetMenuId must be after clear menu and before send menu!!
+    player->PlayerTalkClass->GetGossipMenu().SetMenuId(VIP_MENU_ID);        // Sets menu ID, so we can identify our menu in Select hook. Needs unique number for the menu
+    SendGossipMenuFor(player, DEFAULT_GOSSIP_MESSAGE, player->GetGUID());
+}
+
+void Vip::VipMenuHandle(Player* player, uint32 menuID, uint32 action)
+{
+    if (menuID != VIP_MENU_ID) // Not the menu coded here? stop.
+        return;
+
+    CloseGossipMenuFor(player);
+
+    switch (action)
+    {
+        // Home
+        case 100:
+            SendVipMenu(player);
+            return;
+        case 1:
+        {
+            if (auto summon = GetTempSummon(player))
+            {
+                summon->DespawnOrUnsummon(0);
+                DeleteTempSummon(player);
+            }
+
+            auto summon = player->SummonCreature(NPC_AUCTIONEER, player->GetPosition(), TEMPSUMMON_TIMED_DESPAWN_OUT_OF_COMBAT, 60000);
+            summon->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE);
+            AddTempSummon(player, summon);
+            break;
+        }
+        case 2:
+            player->GetSession()->SendShowBank(player->GetGUID());
+            break;
+        case 3:
+            player->GetSession()->SendShowMailBox(player->GetGUID());
+            break;
+        case 4:
+        {
+            player->RemoveAurasByType(SPELL_AURA_MOUNTED);
+
+            for (auto spellID : _spellBuffs)
+                player->CastSpell(player, spellID, true);
+
+            break;
+        }
+    }
+}
+
+TempSummon* Vip::GetTempSummon(Player* player)
+{
+    return Warhead::Containers::MapGetValuePtr(_tempSummons, player);
+}
+
+void Vip::AddTempSummon(Player* player, TempSummon* summon)
+{
+    _tempSummons.erase(player);
+    _tempSummons.emplace(player, summon);
+}
+
+void Vip::DeleteTempSummon(Player* player)
+{
+    _tempSummons.erase(player);
 }

@@ -6210,8 +6210,8 @@ void Player::_LoadMail(PreparedQueryResult mailsResult, PreparedQueryResult mail
             m->body           = fields[5].Get<std::string>();
             m->expire_time    = time_t(fields[6].Get<uint32>());
             m->deliver_time   = time_t(fields[7].Get<uint32>());
-            m->money          = fields[8].Get<uint32>();
-            m->COD            = fields[9].Get<uint32>();
+            m->Money          = Copper(fields[8].Get<uint32>());
+            m->COD            = Copper(fields[9].Get<uint32>());
             m->checked        = fields[10].Get<uint8>();
             m->stationery     = fields[11].Get<uint8>();
             m->mailTemplateId = fields[12].Get<int16>();
@@ -6878,7 +6878,7 @@ bool Player::Satisfy(DungeonProgressionRequirements const* ar, uint32 target_map
                     //Blizzlike method of printing out the requirements
                     if (missingPlayerQuests.size() && !missingPlayerQuests[0]->note.empty())
                     {
-                        ChatHandler(GetSession()).PSendSysMessage("%s", missingPlayerQuests[0]->note.c_str());
+                        ChatHandler(GetSession()).PSendSysMessage("{}", missingPlayerQuests[0]->note);
                     }
                     else if (missingLeaderQuests.size() && !missingLeaderQuests[0]->note.empty())
                     {
@@ -7004,7 +7004,7 @@ bool Player::CheckInstanceLoginValid()
         return false;
 
     // do checks for satisfy accessreqs, instance full, encounter in progress (raid), perm bind group != perm bind player
-    return sMapMgr->PlayerCannotEnter(GetMap()->GetId(), this, true) == Map::CAN_ENTER;
+    return sMapMgr->PlayerCannotEnter(GetMap()->GetId(), this, true) == CAN_ENTER;
 }
 
 bool Player::CheckInstanceCount(uint32 instanceId) const
@@ -7424,8 +7424,8 @@ void Player::_SaveMail(CharacterDatabaseTransaction trans)
             stmt->SetData(0, uint8(m->HasItems() ? 1 : 0));
             stmt->SetData(1, uint32(m->expire_time));
             stmt->SetData(2, uint32(m->deliver_time));
-            stmt->SetData(3, m->money);
-            stmt->SetData(4, m->COD);
+            stmt->SetData(3, m->Money.GetCopper());
+            stmt->SetData(4, m->COD.GetCopper());
             stmt->SetData(5, uint8(m->checked));
             stmt->SetData(6, m->messageID);
 
