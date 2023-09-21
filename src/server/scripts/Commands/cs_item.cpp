@@ -29,7 +29,6 @@ EndScriptData */
 #include "DBCStores.h"
 #include "DatabaseEnv.h"
 #include "GameConfig.h"
-#include "Language.h"
 #include "ObjectMgr.h"
 #include "Player.h"
 #include "ScriptObject.h"
@@ -163,7 +162,7 @@ public:
         return true;
     }
 
-    // TODO - move item to other slot
+    /// @todo - move item to other slot
     static bool HandleItemMoveCommand(ChatHandler* handler, uint8 srcSlot, uint8 dstSlot)
     {
         if (srcSlot == dstSlot)

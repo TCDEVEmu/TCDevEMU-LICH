@@ -27,7 +27,6 @@
 #include "LFGMgr.h"
 #include "Log.h"
 #include "ObjectAccessor.h"
-#include "ObjectDefines.h"
 #include "Player.h"
 
 namespace lfg
@@ -446,7 +445,7 @@ namespace lfg
                 {
                     if (Player* player = ObjectAccessor::FindConnectedPlayer(itRoles->first))
                     {
-                        if (player->GetMapId() == static_cast<uint32>(dungeon->map))
+                        if (player->GetMapId() == static_cast<uint32>(dungeon->MapID))
                         {
                             if (InstanceScript* instance = player->GetInstanceScript())
                             {

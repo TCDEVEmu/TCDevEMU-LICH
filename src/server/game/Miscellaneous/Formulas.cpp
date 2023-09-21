@@ -19,7 +19,6 @@
 // PVS-Studio Static Code Analyzer for C, C++ and C#: http://www.viva64.com
 
 #include "Formulas.h"
-#include "Battleground.h"
 #include "Creature.h"
 #include "GameConfig.h"
 #include "Log.h"
@@ -81,7 +80,7 @@ uint32 Warhead::XP::Gain(Player* player, Unit* unit, bool isBattleGround /*= fal
     {
         float xpMod = 1.0f;
 
-        gain = BaseGain(player->getLevel(), unit->getLevel(), GetContentLevelsForMapAndZone(unit->GetMapId(), unit->GetZoneId()));
+        gain = BaseGain(player->GetLevel(), unit->GetLevel(), GetContentLevelsForMapAndZone(unit->GetMapId(), unit->GetZoneId()));
 
         if (gain && creature)
         {

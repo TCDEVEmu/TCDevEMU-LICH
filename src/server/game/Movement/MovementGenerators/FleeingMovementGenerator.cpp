@@ -26,7 +26,6 @@
 #include "ObjectAccessor.h"
 #include "PathGenerator.h"
 #include "Player.h"
-#include "VMapFactory.h"
 
 #define MIN_QUIET_DISTANCE 28.0f
 #define MAX_QUIET_DISTANCE 43.0f
@@ -40,6 +39,7 @@ void FleeingMovementGenerator<T>::DoInitialize(T* owner)
         return;
     }
 
+    owner->StopMoving();
     _path = nullptr;
     owner->SetUnitFlag(UNIT_FLAG_FLEEING);
     owner->AddUnitState(UNIT_STATE_FLEEING);
@@ -237,8 +237,19 @@ void TimedFleeingMovementGenerator::Finalize(Unit* owner)
 {
     owner->RemoveUnitFlag(UNIT_FLAG_FLEEING);
     owner->ClearUnitState(UNIT_STATE_FLEEING | UNIT_STATE_FLEEING_MOVE);
-    if (owner->GetVictim())
-        owner->SetTarget(owner->GetVictim()->GetGUID());
+
+    if (Unit* victim = owner->GetVictim())
+    {
+        owner->SetTarget(victim->GetGUID());
+    }
+
+    if (Creature* ownerCreature = owner->ToCreature())
+    {
+        if (CreatureAI* AI = ownerCreature->AI())
+        {
+            AI->MovementInform(TIMED_FLEEING_MOTION_TYPE, 0);
+        }
+    }
 }
 
 bool TimedFleeingMovementGenerator::Update(Unit* owner, uint32 time_diff)

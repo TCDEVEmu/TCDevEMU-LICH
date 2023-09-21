@@ -28,7 +28,6 @@ EndScriptData */
 #include "Chat.h"
 #include "Guild.h"
 #include "GuildMgr.h"
-#include "Language.h"
 #include "ScriptObject.h"
 
 #if WARHEAD_COMPILER == WARHEAD_COMPILER_GNU
@@ -103,7 +102,7 @@ public:
             return false;
         }
 
-        if (sObjectMgr->IsReservedName(guildName) || !sObjectMgr->IsValidCharterName(guildName))
+        if (sObjectMgr->IsReservedName(guildName) || sObjectMgr->IsProfanityName(guildName) || !sObjectMgr->IsValidCharterName(guildName))
         {
             handler->SendSysMessage(LANG_BAD_VALUE);
             handler->SetSentErrorMessage(true);

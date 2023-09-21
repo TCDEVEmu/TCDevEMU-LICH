@@ -21,7 +21,6 @@
 #include "ArenaTeamMgr.h"
 #include "ChatTextBuilder.h"
 #include "DatabaseEnv.h"
-#include "Define.h"
 #include "Language.h"
 #include "Log.h"
 #include "ObjectAccessor.h"
@@ -243,8 +242,9 @@ void ArenaTeamMgr::DistributeArenaPoints()
     {
         if (ArenaTeam* at = titr->second)
         {
-            at->FinishWeek();
-            at->SaveToDB();
+            if (at->FinishWeek())
+                at->SaveToDB(true);
+
             at->NotifyStatsChanged();
         }
     }

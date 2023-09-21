@@ -36,22 +36,20 @@
 #include "Guild.h"
 #include "GuildMgr.h"
 #include "InstanceSaveMgr.h"
-#include "Language.h"
 #include "Log.h"
 #include "LoginQueryHolder.h"
 #include "MapMgr.h"
 #include "Metric.h"
+#include "MotdMgr.h"
 #include "ObjectAccessor.h"
 #include "ObjectMgr.h"
 #include "Opcodes.h"
 #include "Pet.h"
 #include "Player.h"
 #include "PlayerDump.h"
-#include "QueryHolder.h"
 #include "Realm.h"
 #include "ReputationMgr.h"
 #include "ScriptMgr.h"
-#include "ServerMotd.h"
 #include "SharedDefines.h"
 #include "SocialMgr.h"
 #include "SpellAuraEffects.h"
@@ -200,12 +198,6 @@ void WorldSession::HandleCharCreateOpcode(WorldPacket& recvData)
     if (res != CHAR_NAME_SUCCESS)
     {
         SendCharCreate(ResponseCodes(res));
-        return;
-    }
-
-    if (AccountMgr::IsPlayerAccount(GetSecurity()) && sObjectMgr->IsReservedName(createInfo->Name))
-    {
-        SendCharCreate(CHAR_NAME_RESERVED);
         return;
     }
 
@@ -428,7 +420,7 @@ void WorldSession::HandleCharCreateOpcode(WorldPacket& recvData)
                 {
                     LOG_INFO("entities.player.character", "Account: {} (IP: {}) Create Character: {} {}", GetAccountId(), GetRemoteAddress(), newChar->GetName(), newChar->GetGUID().ToString());
                     sScriptMgr->OnPlayerCreate(newChar.get());
-                    sCharacterCache->AddCharacterCacheEntry(newChar->GetGUID(), GetAccountId(), newChar->GetName(), newChar->getGender(), newChar->getRace(), newChar->getClass(), newChar->getLevel());
+                    sCharacterCache->AddCharacterCacheEntry(newChar->GetGUID(), GetAccountId(), newChar->GetName(), newChar->getGender(), newChar->getRace(), newChar->getClass(), newChar->GetLevel());
                     SendCharCreate(CHAR_CREATE_SUCCESS);
                 }
                 else
@@ -505,7 +497,8 @@ void WorldSession::HandleCharDeleteOpcode(WorldPacket& recvData)
     sCalendarMgr->RemoveAllPlayerEventsAndInvites(guid);
     Player::DeleteFromDB(guid.GetCounter(), GetAccountId(), true, false);
 
-    sCharacterCache->DeleteCharacterCacheEntry(guid, name);
+    sWorld->UpdateRealmCharCount(GetAccountId());
+
     SendCharDelete(CHAR_DELETE_SUCCESS);
 }
 
@@ -675,7 +668,7 @@ void WorldSession::HandlePlayerLoginFromDB(LoginQueryHolder const& holder)
 
     // Send MOTD
     {
-        SendPacket(Motd::GetMotdPacket());
+        SendPacket(sMotdMgr->GetMotdPacket());
 
         // send server info
         if (CONF_GET_INT("Server.LoginInfo") == 1)
@@ -892,7 +885,7 @@ void WorldSession::HandlePlayerLoginFromDB(LoginQueryHolder const& holder)
         Warhead::Text::SendNotification(this, LANG_GM_ON);
 
     LOG_INFO("entities.player", "Account: {} (IP: {}) Auth Character:[{}] ({}) Level: {}",
-        GetAccountId(), GetRemoteAddress(), pCurrChar->GetName(), pCurrChar->GetGUID(), pCurrChar->getLevel());
+        GetAccountId(), GetRemoteAddress(), pCurrChar->GetName(), pCurrChar->GetGUID(), pCurrChar->GetLevel());
 
     if (!pCurrChar->IsStandState() && !pCurrChar->HasUnitState(UNIT_STATE_STUNNED))
         pCurrChar->SetStandState(UNIT_STAND_STATE_STAND);
@@ -990,7 +983,7 @@ void WorldSession::HandlePlayerLoginToCharInWorld(Player* pCurrChar)
 
     // Send MOTD
     {
-        SendPacket(Motd::GetMotdPacket());
+        SendPacket(sMotdMgr->GetMotdPacket());
 
         // send server info
         if (CONF_GET_INT("Server.LoginInfo") == 1)
@@ -1191,13 +1184,6 @@ void WorldSession::HandleCharRenameOpcode(WorldPacket& recvData)
     if (res != CHAR_NAME_SUCCESS)
     {
         SendCharRename(ResponseCodes(res), renameInfo.get());
-        return;
-    }
-
-    // check name limitations
-    if (AccountMgr::IsPlayerAccount(GetSecurity()) && sObjectMgr->IsReservedName(renameInfo->Name))
-    {
-        SendCharRename(CHAR_NAME_RESERVED, renameInfo.get());
         return;
     }
 
@@ -1541,13 +1527,6 @@ void WorldSession::HandleCharCustomizeCallback(std::shared_ptr<CharacterCustomiz
         return;
     }
 
-    // check name limitations
-    if (AccountMgr::IsPlayerAccount(GetSecurity()) && sObjectMgr->IsReservedName(customizeInfo->Name))
-    {
-        SendCharCustomize(CHAR_NAME_RESERVED, customizeInfo.get());
-        return;
-    }
-
     // character with this name already exist
     if (ObjectGuid newguid = sCharacterCache->GetCharacterGuidByName(customizeInfo->Name))
     {
@@ -1857,14 +1836,14 @@ void WorldSession::HandleCharFactionOrRaceChangeCallback(std::shared_ptr<Charact
         {
             AuctionHouseObject* auctionHouse = sAuctionMgr->GetAuctionsMap(i == 0 ? 0 : (((1 << (playerData->Race - 1)) & RACEMASK_ALLIANCE) ? 12 : 29));
 
-            for (auto const& [auID, Aentry] : auctionHouse->GetAuctions())
+            auctionHouse->ForEachAuctions([factionChangeInfo, &has_auctions](AuctionEntry* auction)
             {
-                if (Aentry && (Aentry->PlayerOwner == factionChangeInfo->Guid || Aentry->Bidder == factionChangeInfo->Guid))
+                if (auction && (auction->PlayerOwner == factionChangeInfo->Guid || auction->Bidder == factionChangeInfo->Guid))
                 {
                     has_auctions = true;
-                    break;
+                    return;
                 }
-            }
+            });
 
             if (has_auctions)
                 break;
@@ -1922,13 +1901,6 @@ void WorldSession::HandleCharFactionOrRaceChangeCallback(std::shared_ptr<Charact
     if (res != CHAR_NAME_SUCCESS)
     {
         SendCharFactionChange(res, factionChangeInfo.get());
-        return;
-    }
-
-    // check name limitations
-    if (AccountMgr::IsPlayerAccount(GetSecurity()) && sObjectMgr->IsReservedName(factionChangeInfo->Name))
-    {
-        SendCharFactionChange(CHAR_NAME_RESERVED, factionChangeInfo.get());
         return;
     }
 
@@ -2118,7 +2090,7 @@ void WorldSession::HandleCharFactionOrRaceChangeCallback(std::shared_ptr<Charact
 
                     // Get level from LFGDungeonEntry because the one from AreaTableEntry is not valid
                     // If area level is too big, do not add new taxi
-                    if (lfgDungeon->minlevel > level)
+                    if (lfgDungeon->MinLevel > level)
                     {
                         FillTaxiMask(field, 0);
                         continue;

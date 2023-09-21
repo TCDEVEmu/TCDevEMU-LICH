@@ -26,13 +26,11 @@
 #include "GameConfig.h"
 #include "GameTime.h"
 #include "GroupMgr.h"
-#include "Language.h"
 #include "Log.h"
 #include "ModulesConfig.h"
 #include "ObjectAccessor.h"
 #include "Opcodes.h"
 #include "ReputationMgr.h"
-#include "ScriptMgr.h"
 #include <algorithm>
 
 constexpr uint32 MapAlteracValley = 30;
@@ -831,7 +829,7 @@ bool CFBG::FillPlayersToCFBG(BattlegroundQueue* bgqueue, Battleground* bg, Battl
                     std::erase(groups, gInfo);
             }
             else
-                LOG_FATAL("module", "> CFBG: Incorrect conditions for check even teams. Players need: {}. Target team: {}", playersNeed, targetTeam);
+                LOG_CRIT("module", "> CFBG: Incorrect conditions for check even teams. Players need: {}. Target team: {}", playersNeed, targetTeam);
         }
 
         // #2 if all teams even and `MaxPlayersThreshold` complete

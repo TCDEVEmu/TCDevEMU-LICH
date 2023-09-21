@@ -24,7 +24,6 @@
 #include "CreatureAI.h"
 #include "DatabaseEnv.h"
 #include "GameGraveyard.h"
-#include "Language.h"
 #include "ObjectMgr.h"
 #include "Opcodes.h"
 #include "Pet.h"
@@ -291,10 +290,6 @@ void WorldSession::HandleGossipHelloOpcode(WorldPacket& recvData)
 
     // xinef: check if we have ANY npc flags
     if (unit->GetNpcFlags() == UNIT_NPC_FLAG_NONE)
-        return;
-
-    // xinef: do not allow to open gossip when npc is in combat
-    if (unit->GetNpcFlags() == UNIT_NPC_FLAG_GOSSIP && unit->IsInCombat()) // should work on all flags?
         return;
 
     // set faction visible if needed

@@ -25,10 +25,8 @@
 #include "GameConfig.h"
 #include "GameLocale.h"
 #include "GridNotifiersImpl.h"
-#include "Language.h"
 #include "ObjectAccessor.h"
 #include "ObjectMgr.h"
-#include "Opcodes.h"
 #include "Player.h"
 #include "Realm.h"
 #include "SpellMgr.h"
@@ -131,7 +129,7 @@ void ChatHandler::SendSysMessage(std::string_view str, bool escapeCharacters)
     }
 }
 
-void ChatHandler::SendGlobalSysMessage(const char* str)
+void ChatHandler::SendGlobalSysMessage(std::string_view str)
 {
     WorldPacket data;
     for (std::string_view line : Warhead::Tokenize(str, '\n', true))
@@ -655,7 +653,7 @@ ObjectGuid::LowType ChatHandler::extractLowGuidFromLink(char* text, HighGuid& gu
 
                 ObjectGuid::LowType lowguid = (uint32)atol(idS);
 
-                if (sObjectMgr->GetGOData(lowguid))
+                if (sObjectMgr->GetGameObjectData(lowguid))
                     return lowguid;
                 else
                     return 0;

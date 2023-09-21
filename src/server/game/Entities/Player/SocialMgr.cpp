@@ -23,7 +23,6 @@
 #include "DatabaseEnv.h"
 #include "GameConfig.h"
 #include "ObjectAccessor.h"
-#include "ObjectMgr.h"
 #include "Player.h"
 #include "Util.h"
 #include "WorldPacket.h"
@@ -246,7 +245,7 @@ void SocialMgr::GetFriendInfo(Player* player, ObjectGuid friendGUID, FriendInfo&
         if (pFriend->isDND())
             friendInfo.Status = FRIEND_STATUS_DND;
         friendInfo.Area = pFriend->GetZoneId();
-        friendInfo.Level = pFriend->getLevel();
+        friendInfo.Level = pFriend->GetLevel();
         friendInfo.Class = pFriend->getClass();
     }
 }

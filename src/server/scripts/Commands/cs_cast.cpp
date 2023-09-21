@@ -27,7 +27,6 @@ EndScriptData */
 
 #include "Chat.h"
 #include "Creature.h"
-#include "Language.h"
 #include "Player.h"
 #include "ScriptObject.h"
 #include "SpellInfo.h"
@@ -56,6 +55,17 @@ public:
             { "cast", castCommandTable }
         };
         return commandTable;
+    }
+
+    static bool CheckSpellCastResult(ChatHandler* handler, SpellCastResult result)
+    {
+        if (result != SPELL_CAST_OK)
+        {
+            handler->PSendSysMessage(LANG_CMD_CAST_ERROR_CODE, EnumUtils::ToTitle(SpellCastResult(result)), result);
+            return false;
+        }
+
+        return true;
     }
 
     static bool CheckSpellExistsAndIsValid(ChatHandler* handler, SpellInfo const* spell)
@@ -105,7 +115,11 @@ public:
         if (!triggerFlags)
             return false;
 
-        handler->GetSession()->GetPlayer()->CastSpell(target, spell->Id, *triggerFlags);
+        if (!CheckSpellCastResult(handler, handler->GetSession()->GetPlayer()->CastSpell(target, spell->Id, *triggerFlags)))
+        {
+            handler->SetSentErrorMessage(true);
+            return false;
+        }
 
         return true;
     }
@@ -127,7 +141,11 @@ public:
         if (!triggerFlags)
             return false;
 
-        caster->CastSpell(handler->GetSession()->GetPlayer(), spell->Id, *triggerFlags);
+        if (!CheckSpellCastResult(handler, caster->CastSpell(handler->GetSession()->GetPlayer(), spell->Id, *triggerFlags)))
+        {
+            handler->SetSentErrorMessage(true);
+            return false;
+        }
 
         return true;
     }
@@ -143,7 +161,12 @@ public:
 
         float x, y, z;
         handler->GetSession()->GetPlayer()->GetClosePoint(x, y, z, dist);
-        handler->GetSession()->GetPlayer()->CastSpell(x, y, z, spell->Id, *triggerFlags);
+
+        if (!CheckSpellCastResult(handler, handler->GetSession()->GetPlayer()->CastSpell(x, y, z, spell->Id, *triggerFlags)))
+        {
+            handler->SetSentErrorMessage(true);
+            return false;
+        }
 
         return true;
     }
@@ -165,7 +188,11 @@ public:
         if (!triggerFlags)
             return false;
 
-        target->CastSpell(target, spell->Id, *triggerFlags);
+        if (!CheckSpellCastResult(handler, target->CastSpell(target, spell->Id, *triggerFlags)))
+        {
+            handler->SetSentErrorMessage(true);
+            return false;
+        }
 
         return true;
     }
@@ -194,7 +221,11 @@ public:
         if (!triggerFlags)
             return false;
 
-        caster->CastSpell(caster->GetVictim(), spell->Id, *triggerFlags);
+        if (!CheckSpellCastResult(handler, caster->CastSpell(caster->GetVictim(), spell->Id, *triggerFlags)))
+        {
+            handler->SetSentErrorMessage(true);
+            return false;
+        }
 
         return true;
     }
@@ -216,7 +247,11 @@ public:
         if (!triggerFlags)
             return false;
 
-        caster->CastSpell(x, y, z, spell->Id, *triggerFlags);
+        if (!CheckSpellCastResult(handler, caster->CastSpell(x, y, z, spell->Id, *triggerFlags)))
+        {
+            handler->SetSentErrorMessage(true);
+            return false;
+        }
 
         return true;
     }

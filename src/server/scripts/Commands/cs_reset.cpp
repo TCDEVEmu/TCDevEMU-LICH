@@ -30,7 +30,6 @@ EndScriptData */
 #include "ChatTextBuilder.h"
 #include "DatabaseEnv.h"
 #include "GameConfig.h"
-#include "Language.h"
 #include "ObjectAccessor.h"
 #include "Pet.h"
 #include "Player.h"
@@ -139,7 +138,7 @@ public:
         if (!HandleResetStatsOrLevelHelper(target))
             return false;
 
-        uint8 oldLevel = target->getLevel();
+        uint8 oldLevel = target->GetLevel();
 
         // set starting level
         uint32 startLevel = target->getClass() != CLASS_DEATH_KNIGHT

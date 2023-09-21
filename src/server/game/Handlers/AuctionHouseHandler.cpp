@@ -53,7 +53,7 @@ void WorldSession::HandleAuctionHelloOpcode(WorldPackets::AuctionHouse::HelloFro
 // This void causes that auction window is opened
 void WorldSession::SendAuctionHello(ObjectGuid guid, Creature* unit)
 {
-    if (GetPlayer()->getLevel() < CONF_GET_INT("LevelReq.Auction"))
+    if (GetPlayer()->GetLevel() < CONF_GET_INT("LevelReq.Auction"))
     {
         Warhead::Text::SendNotification(this, LANG_AUCTION_REQ, CONF_GET_INT("LevelReq.Auction"));
         return;
@@ -205,7 +205,7 @@ void WorldSession::HandleAuctionRemoveItem(WorldPackets::AuctionHouse::RemoveIte
 void WorldSession::HandleAuctionListBidderItems(WorldPackets::AuctionHouse::ListBidderItems& packet)
 {
     LOG_DEBUG("network", "WORLD: Received CMSG_AUCTION_LIST_BIDDER_ITEMS");
-    sAsyncAuctionMgr->ListBidderItems(_player->GetGUID(), packet.Auctioneer, packet.ListFrom, packet.OutbiddedCount, packet.OutbiddedAuctionIds);
+    sAsyncAuctionMgr->ListBidderItems(_player->GetGUID(), packet.Auctioneer, packet.ListFrom, packet.OutbiddedCount, std::move(packet.OutbiddedAuctionIds));
 }
 
 // Sends player info about his auctions

@@ -22,7 +22,6 @@
 #include "ChatTextBuilder.h"
 #include "DatabaseEnv.h"
 #include "Item.h"
-#include "Language.h"
 #include "Mail.h"
 #include "ObjectMgr.h"
 #include "Pet.h"
@@ -74,14 +73,21 @@ public:
         {
             auto itemTokens = Warhead::Tokenize(itemString, ':', false);
 
-            if (itemTokens.size() != 2)
+            uint32 itemCount;
+            switch (itemTokens.size())
             {
-                handler->SendSysMessage(Warhead::StringFormat("> Incorrect item list format for '{}'", itemString));
-                continue;
+                case 1:
+                    itemCount = 1; // Default to sending 1 item
+                    break;
+                case 2:
+                    itemCount = *Warhead::StringTo<uint32>(itemTokens.at(1));
+                    break;
+                default:
+                    handler->SendSysMessage(Warhead::StringFormat("> Incorrect item list format for '{}'", itemString));
+                    continue;
             }
 
             uint32 itemID = *Warhead::StringTo<uint32>(itemTokens.at(0));
-            uint32 itemCount = *Warhead::StringTo<uint32>(itemTokens.at(1));
 
             ItemTemplate const* itemTemplate = sObjectMgr->GetItemTemplate(itemID);
             if (!itemTemplate)

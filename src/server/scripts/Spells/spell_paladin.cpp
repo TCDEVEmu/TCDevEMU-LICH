@@ -305,7 +305,8 @@ private:
 
     enum Spell
     {
-        PAL_SPELL_ARDENT_DEFENDER_HEAL = 66235
+        PAL_SPELL_ARDENT_DEFENDER_DEBUFF = 66233,
+        PAL_SPELL_ARDENT_DEFENDER_HEAL   = 66235
     };
 
     bool Validate(SpellInfo const* /*spellInfo*/) override
@@ -332,7 +333,7 @@ private:
         int32 remainingHealth = victim->GetHealth() - dmgInfo.GetDamage();
         uint32 allowedHealth = victim->CountPctFromMaxHealth(35);
         // If damage kills us
-        if (remainingHealth <= 0 && !victim->ToPlayer()->HasSpellCooldown(PAL_SPELL_ARDENT_DEFENDER_HEAL))
+        if (remainingHealth <= 0 && !victim->ToPlayer()->HasAura(PAL_SPELL_ARDENT_DEFENDER_DEBUFF))
         {
             // Cast healing spell, completely avoid damage
             absorbAmount = dmgInfo.GetDamage();
@@ -340,14 +341,13 @@ private:
             uint32 defenseSkillValue = victim->GetDefenseSkillValue();
             // Max heal when defense skill denies critical hits from raid bosses
             // Formula: max defense at level + 140 (raiting from gear)
-            uint32 reqDefForMaxHeal = victim->getLevel() * 5 + 140;
+            uint32 reqDefForMaxHeal = victim->GetLevel() * 5 + 140;
             float pctFromDefense = (defenseSkillValue >= reqDefForMaxHeal)
                                     ? 1.0f
                                     : float(defenseSkillValue) / float(reqDefForMaxHeal);
 
             int32 healAmount = int32(victim->CountPctFromMaxHealth(uint32(healPct * pctFromDefense)));
             victim->CastCustomSpell(PAL_SPELL_ARDENT_DEFENDER_HEAL, SPELLVALUE_BASE_POINT0, healAmount, victim, true, nullptr, aurEff);
-            victim->ToPlayer()->AddSpellCooldown(PAL_SPELL_ARDENT_DEFENDER_HEAL, 0, 120000);
         }
         else if (remainingHealth < int32(allowedHealth))
         {

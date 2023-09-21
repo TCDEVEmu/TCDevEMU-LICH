@@ -20,10 +20,8 @@
 
 #include "Chat.h"
 #include "Group.h"
-#include "Language.h"
 #include "ObjectAccessor.h"
 #include "Player.h"
-#include "ScriptMgr.h"
 #include "ScriptObject.h"
 
 using namespace Warhead::ChatCommands;
@@ -125,7 +123,7 @@ public:
                 else
                 {
                     sCharacterCache->AddCharacterCacheEntry(cPlayer->GetGUID(), cPlayer->GetSession()->GetAccountId(), cPlayer->GetName(),
-                        cPlayer->getGender(), cPlayer->getRace(), cPlayer->getClass(), cPlayer->getLevel());
+                        cPlayer->getGender(), cPlayer->getRace(), cPlayer->getClass(), cPlayer->GetLevel());
                 }
 
                 sCharacterCache->UpdateCharacterAccountId(cPlayer->GetGUID(), cPlayer->GetSession()->GetAccountId());

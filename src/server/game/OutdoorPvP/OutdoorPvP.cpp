@@ -22,7 +22,6 @@
 #include "CellImpl.h"
 #include "DatabaseEnv.h"
 #include "GridNotifiers.h"
-#include "GridNotifiersImpl.h"
 #include "Group.h"
 #include "Map.h"
 #include "MapMgr.h"
@@ -72,7 +71,7 @@ void OPvPCapturePoint::AddGO(uint32 type, ObjectGuid::LowType guid, uint32 entry
 {
     if (!entry)
     {
-        const GameObjectData* data = sObjectMgr->GetGOData(guid);
+        const GameObjectData* data = sObjectMgr->GetGameObjectData(guid);
         if (!data)
             return;
         entry = data->id;

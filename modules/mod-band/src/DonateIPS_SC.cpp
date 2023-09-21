@@ -28,7 +28,6 @@
 #include "Realm.h"
 #include "ScriptObject.h"
 #include "StopWatch.h"
-#include "StringConvert.h"
 #include "TaskScheduler.h"
 #include <unordered_map>
 #include <vector>
@@ -206,7 +205,7 @@ private:
         auto ipsShopDefine = ipsShopLink->ItemID;
         if (!ipsShopDefine)
         {
-            LOG_FATAL("module.ips", "> DonateIPS: Невозможно найти определение для номера {}", ipsShopLink->ID);
+            LOG_CRIT("module.ips", "> DonateIPS: Невозможно найти определение для номера {}", ipsShopLink->ID);
             return;
         }
 
@@ -225,7 +224,7 @@ private:
             SendRewardChangeFaction(ipsShopLink->NickName);
             break;
         default:
-            LOG_FATAL("module.ips", "> DonateIPS: Неверый тип шоп айди ({})", static_cast<uint32>(ipsShopDefine->Type));
+            LOG_CRIT("module.ips", "> DonateIPS: Неверый тип шоп айди ({})", static_cast<uint32>(ipsShopDefine->Type));
             return;
         }
 
@@ -283,7 +282,7 @@ private:
         if (itr != _shopStore.end())
             return itr->second;
 
-        LOG_FATAL("modules.ips", "> DonateIPS: невозможно найти данные для шоп айди ({})", shopID);
+        LOG_CRIT("modules.ips", "> DonateIPS: невозможно найти данные для шоп айди ({})", shopID);
 
         return std::nullopt;
     }
